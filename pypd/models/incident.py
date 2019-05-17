@@ -100,6 +100,33 @@ class Incident(Entity):
                               data=data,)
         return result
 
+    def reassign_escalation_policy(self, from_email, escalation_policy_id):
+        """Reassign an incident to another escalation policy using a valid email address."""
+        endpoint = '/'.join((self.endpoint, self.id,))
+
+        if from_email is None or not isinstance(from_email, six.string_types):
+            raise MissingFromEmail(from_email)
+
+        if escalation_policy_id is None or not isinstance(escalation_policy_id, six.string_types):
+            raise InvalidArguments(escalation_policy_id)
+
+        add_headers = {'from': from_email, }
+        data = {
+            'incident': {
+                'type': 'incident',
+                'escalation_policy': {
+                    'id': escalation_policy_id,
+                    'type': 'escalation_policy_reference',
+                },
+            }
+        }
+
+        result = self.request('PUT',
+                              endpoint=endpoint,
+                              add_headers=add_headers,
+                              data=data,)
+        return result
+
     def log_entries(self, time_zone='UTC', is_overview=False,
                     include=None, fetch_all=True):
         """Query for log entries on an incident instance."""
