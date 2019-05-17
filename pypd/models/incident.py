@@ -100,6 +100,65 @@ class Incident(Entity):
                               data=data,)
         return result
 
+    def add_responders(self, from_email, requester_id, message, user_ids=None, escalation_policy_ids=None):
+        """Request responders to join an incident using a valid email address."""
+        endpoint = '/'.join((self.endpoint, self.id, 'responder_requests'))
+
+        if from_email is None or not isinstance(from_email, six.string_types):
+            raise MissingFromEmail(from_email)
+
+        if not (user_ids or escalation_policy_ids):
+            raise InvalidArguments('Need at least one target to be supplied')
+
+        responders = []
+
+        if user_ids:
+            if not isinstance(user_ids, list):
+                raise InvalidArguments(user_ids)
+            if not all([isinstance(i, six.string_types) for i in user_ids]):
+                raise InvalidArguments(user_ids)
+
+            users = [
+                {
+                    'responder_request_target': {
+                        'id': user_id,
+                        'type': 'user_reference',
+                    }
+                }
+                for user_id in user_ids
+            ]
+            responders += users
+
+        if escalation_policy_ids:
+            if not isinstance(escalation_policy_ids, list):
+                raise InvalidArguments(escalation_policy_ids)
+            if not all([isinstance(i, six.string_types) for i in escalation_policy_ids]):
+                raise InvalidArguments(escalation_policy_ids)
+
+            esclation_policies = [
+                {
+                    'responder_request_target': {
+                        'id': escalation_policy_id,
+                        'type': 'escalation_policy_reference',
+                    }
+                }
+                for escalation_policy_id in escalation_policy_ids
+            ]
+            responders += esclation_policies
+
+        add_headers = {'from': from_email, }
+        data = {
+            'requester_id': requester_id,
+            "message": message,
+            "responder_request_targets": responders
+        }
+
+        result = self.request('POST',
+                              endpoint=endpoint,
+                              add_headers=add_headers,
+                              data=data,)
+        return result
+
     def reassign_escalation_policy(self, from_email, escalation_policy_id):
         """Reassign an incident to another escalation policy using a valid email address."""
         endpoint = '/'.join((self.endpoint, self.id,))
@@ -118,6 +177,30 @@ class Incident(Entity):
                     'id': escalation_policy_id,
                     'type': 'escalation_policy_reference',
                 },
+            }
+        }
+
+        result = self.request('PUT',
+                              endpoint=endpoint,
+                              add_headers=add_headers,
+                              data=data,)
+        return result
+
+    def rename(self, from_email, title):
+        """Rename an incident using a valid email address."""
+        endpoint = '/'.join((self.endpoint, self.id,))
+
+        if from_email is None or not isinstance(from_email, six.string_types):
+            raise MissingFromEmail(from_email)
+
+        if title is None or not isinstance(title, six.string_types):
+            raise InvalidArguments(title)
+
+        add_headers = {'from': from_email, }
+        data = {
+            'incident': {
+                'type': 'incident',
+                'title': title,
             }
         }
 
